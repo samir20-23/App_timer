@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylized Clock Face Circle (slate-lighter) -->
+    <path
+        android:fillColor="#F1F5F9"
+        android:pathData="M54,24c-16.6,0-30,13.4-30,30s13.4,30 30,30s30,-13.4 30,-30S70.6,24 54,24z M54,78c-13.3,0-24,-10.7-24,-24s10.7,-24 24,-24s24,10.7 24,24S67.3,78 54,78z" />
+    <!-- Clock Hands indicating active work hours -->
+    <path
+        android:fillColor="#F1F5F9"
+        android:pathData="M52,34h4v20h-4V34z" />
+    <path
+        android:fillColor="#F1F5F9"
+        android:pathData="M52,50h12v4h-12V50z" />
+    <!-- Growth Trends Arrow (Neon Sky Blue) to symbolise Force / Salary earning -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M64,64l12,-12l4,4V42H66l4,4l-12,12l-8,-8l-14,14l4,4l10,-10L64,64z" />
+</vector>

@@ -1,0 +1,6 @@
+{
+  "name": "WorkDevForce",
+  "description": "Professional Work Hours Logger & Salary Tracker",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
