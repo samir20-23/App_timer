@@ -80,15 +80,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             // Elegant Slate Premium Colors overriding MaterialTheme
             val SlateDarkPalette = darkColorScheme(
-                primary = Color(0xFF38BDF8),       // Sky accent
-                secondary = Color(0xFF94A3B8),     // Muted text gray
-                tertiary = Color(0xFF34D399),      // Safe Emerald
-                background = Color(0xFF0F172A),    // Rich deep slate
-                surface = Color(0xFF1E293B),       // Slate-800 Cards
+                primary = Color(0xFF38BDF8),       // Sky blue accent
+                secondary = Color(0xFF94A3B8),     // Muted gray-400
+                tertiary = Color(0xFF10B981),      // Safe Emerald green
+                background = Color(0xFF090D16),    // Pure charcoal deep slate background
+                surface = Color(0xFF111827),       // Slate-900 surface card background
                 onPrimary = Color(0xFFFFFFFF),
-                onSecondary = Color(0xFF0F172A),
-                onBackground = Color(0xFFF1F5F9),  // Light off-white text
-                onSurface = Color(0xFFF1F5F9)
+                onSecondary = Color(0xFF090D16),
+                onBackground = Color(0xFFF3F4F6),  // Pure light white text
+                onSurface = Color(0xFFF3F4F6),
+                error = Color(0xFFEF4444)
             )
 
             MaterialTheme(
@@ -115,6 +116,9 @@ class MainActivity : ComponentActivity() {
                             }
                             WorkViewModel.Screen.PdfReport -> {
                                 PdfReportScreen(viewModel = viewModel)
+                            }
+                            WorkViewModel.Screen.GameHub -> {
+                                GameHubScreen(viewModel = viewModel)
                             }
                         }
                     }
@@ -399,11 +403,23 @@ fun MainAppScreen(viewModel: WorkViewModel) {
                 ) {
                     TopAppBar(
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = Color(0xFF090D16)
                         ),
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Open Profile")
+                                Icon(Icons.Default.Menu, contentDescription = "Open Profile", tint = Color.White)
+                            }
+                        },
+                        actions = {
+                            IconButton(
+                                onClick = { showPdfRangeModal = true },
+                                modifier = Modifier.padding(end = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PictureAsPdf,
+                                    contentDescription = "Export Timesheet PDF",
+                                    tint = Color(0xFF38BDF8)
+                                )
                             }
                         },
                         title = {
@@ -553,23 +569,8 @@ fun MainAppScreen(viewModel: WorkViewModel) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .background(Color(0xFF090D16))
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .drawBehind {
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color(0x0C38BDF8),
-                                        Color(0x00000000)
-                                    ),
-                                    center = Offset(this.size.width * 0.8f, this.size.height * 0.2f),
-                                    radius = this.size.width * 0.8f
-                                )
-                            )
-                        }
-                )
 
                 LazyColumn(
                     state = listState,
@@ -602,6 +603,24 @@ fun MainAppScreen(viewModel: WorkViewModel) {
                             onToggleLock = { viewModel.toggleMonthLock(context) },
                             onToggleDefaultOff = { viewModel.toggleDefaultOff(context) },
                             isTodayMonth = viewModel.isTodayMonth()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Total Summaries & Deductions Dashboard Node (Placed prominently at the top!)
+                    val finances = viewModel.getMonthlyFinances()
+                    item {
+                        MonthlyFinancesSummary(
+                            finances = finances,
+                            deductions = currentMonthData.deductions,
+                            isMonthClosed = currentMonthData.isClosed,
+                            onAddDeduction = { viewModel.addDeduction(context) },
+                            onUpdateDeduction = { dedId, amt, note ->
+                                viewModel.updateDeduction(dedId, amt, note, context)
+                            },
+                            onDeleteDeduction = { dedId ->
+                                viewModel.deleteDeduction(dedId, context)
+                            }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -701,29 +720,9 @@ fun MainAppScreen(viewModel: WorkViewModel) {
                         }
                     }
 
-                    // Total Summaries & Deductions Dashboard Node
-                    val finances = viewModel.getMonthlyFinances()
-                    item {
-                        MonthlyFinancesSummary(
-                            finances = finances,
-                            deductions = currentMonthData.deductions,
-                            isMonthClosed = currentMonthData.isClosed,
-                            onAddDeduction = { viewModel.addDeduction(context) },
-                            onUpdateDeduction = { dedId, amt, note ->
-                                viewModel.updateDeduction(dedId, amt, note, context)
-                            },
-                            onDeleteDeduction = { dedId ->
-                                viewModel.deleteDeduction(dedId, context)
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
                     // Built-in expandable Calculator Card Widget
                     item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            shape = RoundedCornerShape(12.dp),
+                        GlassCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateContentSize()
@@ -1285,9 +1284,7 @@ fun MonthNavigatorWidget(
     onToggleDefaultOff: () -> Unit,
     isTodayMonth: Boolean
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
+    GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1374,9 +1371,7 @@ fun DefaultsAndFinanceWidget(
     var localLoss by remember(globalDeduction) { mutableStateOf(globalDeduction) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(12.dp),
+        GlassCard(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1433,9 +1428,7 @@ fun DefaultsAndFinanceWidget(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(12.dp),
+        GlassCard(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1559,9 +1552,9 @@ fun WorkRowMobileCard(
 ) {
     val isSunday = try { LocalDate.parse(row.date).dayOfWeek == java.time.DayOfWeek.SUNDAY } catch(e:Exception){false}
     val cardColor = when {
-        isSunday -> Color(0xFF1E293B).copy(alpha = 0.5f)
-        row.off -> Color(0xFF1E293B).copy(alpha = 0.7f)
-        else -> MaterialTheme.colorScheme.surface
+        isSunday -> Color(0xFF1F2937).copy(alpha = 0.4f)
+        row.off -> Color(0xFF1F2937).copy(alpha = 0.6f)
+        else -> Color(0xFF111827)
     }
 
     val isConfirmingDelete = confirmDeleteId == row.id
@@ -1574,11 +1567,11 @@ fun WorkRowMobileCard(
     val disableDateNotes = isFuture || isMonthClosed
 
     val cardBorder = if (row.isNewCompanyStart) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
     } else if (isSelected) {
-        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
     } else {
-        BorderStroke(0.5.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+        BorderStroke(1.dp, Color(0xFF1F2937))
     }
 
     Card(
@@ -1752,9 +1745,7 @@ fun WorkLogsTableWidget(
     onDeleteConfirmed: (String) -> Unit,
     onDeleteCancelled: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
+    GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1988,9 +1979,7 @@ fun MonthlyFinancesSummary(
     onUpdateDeduction: (String, String, String) -> Unit,
     onDeleteDeduction: (String) -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
+    GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -2656,6 +2645,637 @@ fun RadialFabMenu(
                     .size(28.dp)
                     .rotate(rotation)
             )
+        }
+    }
+}
+
+// Reusable Ultra-premium Glass Card Layout
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    border: BorderStroke = BorderStroke(
+        1.dp,
+        Color(0xFF1F2937) // Clean Tailwind Slate-800 border look
+    ),
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier,
+        border = border,
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF111827) // Solid premium Slate-900 surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        content = content
+    )
+}
+
+// Interactive Premium Game Hub Screen
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun GameHubScreen(viewModel: WorkViewModel) {
+    val context = LocalContext.current
+    var activeTab by remember { mutableStateOf(0) } // 0 = Dev Clicker, 1 = Grid Memory Match
+
+    // SharedPreferences for 클릭커 score persistent state
+    val prefs = remember { context.getSharedPreferences("workdevforce_games_prefs", Context.MODE_PRIVATE) }
+    var score by remember { mutableStateOf(prefs.getLong("clicker_score_v1", 0L)) }
+    var multLevel by remember { mutableStateOf(prefs.getInt("clicker_mult_v1", 1)) }
+    var autoDps by remember { mutableStateOf(prefs.getInt("clicker_dps_v1", 0)) }
+
+    // Save score when changed
+    LaunchedEffect(score, multLevel, autoDps) {
+        prefs.edit().apply {
+            putLong("clicker_score_v1", score)
+            putInt("clicker_mult_v1", multLevel)
+            putInt("clicker_dps_v1", autoDps)
+            apply()
+        }
+    }
+
+    // Auto DPS ticker
+    LaunchedEffect(autoDps) {
+        if (autoDps > 0) {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                score += autoDps
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0x700F172A)
+                ),
+                navigationIcon = {
+                    IconButton(onClick = { viewModel.closeGameHub() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Board", tint = Color.White)
+                    }
+                },
+                title = {
+                    Text(
+                        text = "WorkDev Fun Center",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .drawBehind {
+                    // Futuristic ambient backdrop
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF0F172A), Color(0xFF020617))
+                        )
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x2AA78BFA), Color(0x00000000)),
+                            center = Offset(size.width * 0.2f, size.height * 0.3f),
+                            radius = size.width * 0.8f
+                        )
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x2A38BDF8), Color(0x00000000)),
+                            center = Offset(size.width * 0.8f, size.height * 0.7f),
+                            radius = size.width * 0.8f
+                        )
+                    )
+                }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Modern Tab Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x1F1E293B))
+                        .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    val tabStyle0 = if (activeTab == 0) ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8).copy(alpha = 0.2f), contentColor = Color(0xFF38BDF8))
+                                    else ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White.copy(alpha = 0.5f))
+                    val tabStyle1 = if (activeTab == 1) ButtonDefaults.buttonColors(containerColor = Color(0xFFA78BFA).copy(alpha = 0.2f), contentColor = Color(0xFFA78BFA))
+                                    else ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White.copy(alpha = 0.5f))
+
+                    Button(
+                        onClick = { activeTab = 0 },
+                        colors = tabStyle0,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Dev Clicker", fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = { activeTab = 1 },
+                        colors = tabStyle1,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.GridView, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Memory Match", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Crossfade(targetState = activeTab, label = "tab_cross") { tab ->
+                    when (tab) {
+                        0 -> DevClickerTab(
+                            score = score,
+                            multLevel = multLevel,
+                            autoDps = autoDps,
+                            onUpdateScore = { score = it },
+                            onUpgradeMultiplier = { multLevel = it },
+                            onUpgradeDps = { autoDps = it }
+                        )
+                        1 -> MemoryMatchTab(viewModel = viewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Click particle system for dynamic popups on clicking the code coin
+data class ClickEffect(
+    val id: String,
+    val text: String,
+    val x: Float,
+    val y: Float,
+    var alpha: Float = 1f,
+    var offset: Float = 0f
+)
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun DevClickerTab(
+    score: Long,
+    multLevel: Int,
+    autoDps: Int,
+    onUpdateScore: (Long) -> Unit,
+    onUpgradeMultiplier: (Int) -> Unit,
+    onUpgradeDps: (Int) -> Unit
+) {
+    val clickParticles = remember { mutableStateListOf<ClickEffect>() }
+    var coinScale by remember { mutableStateOf(1f) }
+
+    val teaCost = 50 * multLevel
+    val copilotCost = 150 + (autoDps * 12)
+
+    // Pulse animation for gold coin
+    val coinScaleAnim by animateFloatAsState(
+        targetValue = coinScale,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "coin_scale"
+    )
+
+    // Cleanup click particles
+    LaunchedEffect(clickParticles.size) {
+        if (clickParticles.isNotEmpty()) {
+            kotlinx.coroutines.delay(100L)
+            clickParticles.forEach { p ->
+                p.alpha -= 0.15f
+                p.offset -= 6f
+            }
+            clickParticles.removeAll { it.alpha <= 0f }
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            // Dynamic Header Showing Scores
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0x271E293B)),
+                border = BorderStroke(1.dp, Color(0x1AFFFFFF)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "BALANCE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF94A3B8),
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MonetizationOn,
+                            contentDescription = "Points",
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "$score DP",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFBBF24)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Click power: +$multLevel DP | Automation: +$autoDps DP/sec",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF38BDF8),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // The Glowing Digital Code Coin
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .graphicsLayer {
+                        scaleX = coinScaleAnim
+                        scaleY = coinScaleAnim
+                    }
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(Color(0xFF38BDF8), Color(0xFF0369A1))
+                        )
+                    )
+                    .clickable {
+                        coinScale = 0.85f
+                        coinScale = 1f
+                        onUpdateScore(score + multLevel)
+
+                        // Floating particles
+                        clickParticles.add(
+                            ClickEffect(
+                                id = UUID
+                                    .randomUUID()
+                                    .toString(),
+                                text = "+$multLevel",
+                                x = (40 + Math.random() * 80).toFloat(),
+                                y = (40 + Math.random() * 80).toFloat()
+                            )
+                        )
+                    }
+                    .border(3.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                // Shiny highlight and code letters inside
+                Icon(
+                    imageVector = Icons.Default.Terminal,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(72.dp)
+                )
+
+                // Particle representations
+                clickParticles.forEach { p ->
+                    Text(
+                        text = p.text,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        modifier = Modifier
+                            .offset(x = p.x.dp, y = (p.y + p.offset).dp)
+                            .graphicsLayer { alpha = p.alpha }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            // Moroccan Upgrades Shop Title
+            Text(
+                "UPGRADES & PERKS",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF64748B),
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        // Upgrade 1: Tea booster
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0x1F1E293B)),
+                border = BorderStroke(1.dp, if (score >= teaCost) Color(0x6638BDF8) else Color(0x1AFFFFFF)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF34D399).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Coffee, contentDescription = null, tint = Color(0xFF34D399))
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Mint Tea Booster", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Increases clicking power by +1 DP", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
+                    }
+                    Button(
+                        onClick = {
+                            if (score >= teaCost) {
+                                onUpdateScore(score - teaCost)
+                                onUpgradeMultiplier(multLevel + 1)
+                            }
+                        },
+                        enabled = score >= teaCost,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8))
+                    ) {
+                        Text("$teaCost DP", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Upgrade 2: Copilot AI Assist
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0x1F1E293B)),
+                border = BorderStroke(1.dp, if (score >= copilotCost) Color(0x66A78BFA) else Color(0x1AFFFFFF)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFA78BFA).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFFA78BFA))
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("AI Copilot Assist", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Generates Autopilot +2 DP/sec", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
+                    }
+                    Button(
+                        onClick = {
+                            if (score >= copilotCost) {
+                                onUpdateScore(score - copilotCost)
+                                onUpgradeDps(autoDps + 2)
+                            }
+                        },
+                        enabled = score >= copilotCost,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA78BFA))
+                    ) {
+                        Text("$copilotCost DP", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(30.dp)) }
+    }
+}
+
+// Memory Match Game Tab
+data class MemoryTile(
+    val id: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    var isFlipped: Boolean = false,
+    var isMatched: Boolean = false
+)
+
+@Composable
+fun MemoryMatchTab(viewModel: WorkViewModel) {
+    val context = LocalContext.current
+    val icons = listOf(
+        Icons.Default.Terminal,
+        Icons.Default.Code,
+        Icons.Default.Work,
+        Icons.Default.Laptop,
+        Icons.Default.Memory,
+        Icons.Default.DeveloperMode,
+        Icons.Default.Speed,
+        Icons.Default.Build
+    )
+
+    // Build grid of 16 tiles (8 pairs)
+    val tiles = remember {
+        mutableStateListOf<MemoryTile>().apply {
+            val list = (icons + icons).shuffled().mapIndexed { index, icon ->
+                MemoryTile(id = index, icon = icon)
+            }
+            addAll(list)
+        }
+    }
+
+    var selectedFirst by remember { mutableStateOf<Int?>(null) }
+    var selectedSecond by remember { mutableStateOf<Int?>(null) }
+    var matchesFound by remember { mutableStateOf(0) }
+    var moves by remember { mutableStateOf(0) }
+
+    // Logic to reset and handle flip match checks
+    LaunchedEffect(selectedFirst, selectedSecond) {
+        if (selectedFirst != null && selectedSecond != null) {
+            val first = tiles[selectedFirst!!]
+            val second = tiles[selectedSecond!!]
+
+            if (first.icon == second.icon) {
+                // Match!
+                first.isMatched = true
+                second.isMatched = true
+                matchesFound++
+
+                selectedFirst = null
+                selectedSecond = null
+
+                if (matchesFound >= 8) {
+                    Toast.makeText(context, "Outstanding! You matched everyone. Play again!", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                // Not a match, flip back after a slight delay so user can memorize
+                kotlinx.coroutines.delay(800L)
+                first.isFlipped = false
+                second.isFlipped = false
+
+                selectedFirst = null
+                selectedSecond = null
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0x1A1E293B)),
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Moves: $moves", fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Matched: $matchesFound / 8 Pairs", fontWeight = FontWeight.Bold, color = Color(0xFF34D399))
+                TextButton(
+                    onClick = {
+                        tiles.clear()
+                        val newShuffled = (icons + icons).shuffled().mapIndexed { index, icon ->
+                            MemoryTile(id = index, icon = icon)
+                        }
+                        tiles.addAll(newShuffled)
+                        selectedFirst = null
+                        selectedSecond = null
+                        matchesFound = 0
+                        moves = 0
+                    }
+                ) {
+                    Text("Restart", fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Grid Drawing using basic looping rows
+        for (row in 0 until 4) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                for (col in 0 until 4) {
+                    val tileIdx = row * 4 + col
+                    val tile = tiles[tileIdx]
+
+                    // Animated Card Flip rotations
+                    val angle by animateFloatAsState(
+                        targetValue = if (tile.isFlipped || tile.isMatched) 180f else 0f,
+                        animationSpec = tween(400),
+                        label = "card_flip"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(70.dp)
+                            .padding(4.dp)
+                            .graphicsLayer {
+                                rotationY = angle
+                                cameraDistance = 12f * density
+                            }
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (angle > 90f) {
+                                    if (tile.isMatched) Color(0x3B34D399) else Color(0x4FA78BFA)
+                                } else {
+                                    Color(0x3F1E293B)
+                                }
+                            )
+                            .clickable {
+                                if (!tile.isFlipped && !tile.isMatched && selectedSecond == null) {
+                                    tile.isFlipped = true
+                                    moves++
+                                    if (selectedFirst == null) {
+                                        selectedFirst = tileIdx
+                                    } else {
+                                        selectedSecond = tileIdx
+                                    }
+                                }
+                            }
+                            .border(
+                                1.dp,
+                                if (tile.isMatched) Color(0xFF34D399) else Color(0x33FFFFFF),
+                                RoundedCornerShape(8.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (angle > 90f) {
+                            // Graphics rotated, flip icon back visually so it displays pointing correctly
+                            Icon(
+                                imageVector = tile.icon,
+                                contentDescription = null,
+                                tint = if (tile.isMatched) Color(0xFF34D399) else Color.White,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .graphicsLayer { rotationY = 180f }
+                            )
+                        } else {
+                            // Question mark or branding logo on the card's back
+                            Text(
+                                "Dev",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF38BDF8)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        if (matchesFound >= 8) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = {
+                    tiles.clear()
+                    val newShuffled = (icons + icons).shuffled().mapIndexed { index, icon ->
+                        MemoryTile(id = index, icon = icon)
+                    }
+                    tiles.addAll(newShuffled)
+                    selectedFirst = null
+                    selectedSecond = null
+                    matchesFound = 0
+                    moves = 0
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34D399))
+            ) {
+                Text("Play Again", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

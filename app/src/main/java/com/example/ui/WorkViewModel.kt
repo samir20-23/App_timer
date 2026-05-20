@@ -52,7 +52,16 @@ class WorkViewModel : ViewModel() {
 
     enum class Screen {
         Main,
-        PdfReport
+        PdfReport,
+        GameHub
+    }
+
+    fun openGameHub() {
+        _activeScreen.value = Screen.GameHub
+    }
+
+    fun closeGameHub() {
+        _activeScreen.value = Screen.Main
     }
 
     fun init(context: Context) {
